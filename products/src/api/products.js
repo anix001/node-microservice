@@ -10,9 +10,9 @@ module.exports = (app) => {
     app.post('/product/create', async(req,res,next) => {
         
         try {
-            const { name, desc, type, unit,price, available, suplier, banner } = req.body; 
+            const { name, desc, type, unit,price, available, supplier, banner } = req.body; 
             // validation
-            const { data } =  await service.CreateProduct({ name, desc, type, unit,price, available, suplier, banner });
+            const { data } =  await service.CreateProduct({ name, desc, type, unit,price, available, supplier, banner });
             return res.json(data);
             
         } catch (err) {
@@ -83,7 +83,7 @@ module.exports = (app) => {
 
         try {
             //get payload to send to customer service
-            const data = await service.GetProductPayload(_id, {productId},'REMOVE_FROM_WISHLIST');
+            const data = await service.GetProductPayload(_id, {productId:productId},'REMOVE_FROM_WISHLIST');
             PublishCustomerEvent(data);
             return res.status(200).json(data.data.product);
         } catch (err) {
