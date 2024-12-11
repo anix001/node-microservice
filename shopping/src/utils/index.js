@@ -1,8 +1,9 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-const axios = require("axios");
+// const axios = require("axios");
+const amqplib = require('amqplib')
 
-const { APP_SECRET } = require("../config");
+const { APP_SECRET, MESSAGE_BROKER_URL, EXCHANGE_NAME, SHOPPING_SERVICE_BINDING_KEY, QUEUE_NAME } = require("../config");
 
 //Utility functions
 module.exports.GenerateSalt = async () => {
@@ -53,12 +54,61 @@ module.exports.FormateData = (data) => {
 
 
 //Raise Events
-module.exports.PublishCustomerEvent = async (payload) => {
-  axios.post("http://localhost:8000/customer/app-events/", {
-    payload,
-  });
+// module.exports.PublishCustomerEvent = async (payload) => {
+//   axios.post("http://localhost:8000/customer/app-events/", {
+//     payload,
+//   });
 
-  //     axios.post(`${BASE_URL}/customer/app-events/`,{
-  //         payload
-  //     });
-};
+//   //     axios.post(`${BASE_URL}/customer/app-events/`,{
+//   //         payload
+//   //     });
+// };
+
+
+//************Communication using RabbitMq(message broker) **********//
+
+//create a channel
+
+module.exports.CreateChannel = async()=>{
+  try{
+   const connection = await amqplib.connect(MESSAGE_BROKER_URL);
+   const channel = await connection.createChannel();
+   //creating an exchange 
+   await channel.assertExchange(EXCHANGE_NAME, 'direct', {
+     durable: false
+   });
+   return channel;
+  }catch(err){
+   console.log("Error while creating channel", err);
+  }
+ }
+ 
+ //publish message
+ 
+ module.exports.PublishMessage = async(channel, binding_key, message)=>{
+  try{
+     await channel.publish(EXCHANGE_NAME, binding_key, Buffer.from(message));
+     console.log("Message has been published from shopping service", message);
+  }catch(err){
+   console.log("Error while publishing message", err);
+  }
+ }
+ 
+ //consume message
+ module.exports.ConsumeMessage = async(channel, service)=>{
+   try{
+   const appQueue = channel.assertQueue(QUEUE_NAME);
+   channel.bindQueue(appQueue.queue, EXCHANGE_NAME, SHOPPING_SERVICE_BINDING_KEY);
+   channel.consume(appQueue.queue, data=>{
+     console.log("data received in shopping service");
+     console.log(data.content.toString());
+
+     //subscribe the events
+     service.SubscribeEvents(data.content.toString());
+
+     channel.ack(data);
+   })
+   }catch(err){
+    console.log("Error while consume message", err);
+   }
+ }

@@ -110,9 +110,9 @@ class CustomerService {
         }
     }
 
-    async AddToWishlist(customerId, product){
+    async AddToWishlist(customerId, product, isRemove){
         try {
-            const wishlistResult = await this.repository.AddWishlistItem(customerId, product);        
+            const wishlistResult = await this.repository.AddWishlistItem(customerId, product, isRemove);        
            return FormateData(wishlistResult);
     
         } catch (err) {
@@ -139,18 +139,23 @@ class CustomerService {
     }
 
     async SubscribeEvents(payload){
+       
+        //parsing the json data got from message broker
+        payload = JSON.parse(payload);
  
-        const { event, data } =  payload;
+        const { event , data } =  payload;
 
         const { userId, product, order, qty } = data;
 
         switch(event){
-            case 'ADD_TO_WISHLIST':
             case 'REMOVE_FROM_WISHLIST':
-                this.AddToWishlist(userId,product)
+                this.AddToWishlist(userId, product, true)
+                break;
+            case 'ADD_TO_WISHLIST':
+                this.AddToWishlist(userId,product, false)
                 break;
             case 'ADD_TO_CART':
-                this.ManageCart(userId,product, qty, false);
+                this.ManageCart(userId, product, qty, false);
                 break;
             case 'REMOVE_FROM_CART':
                 this.ManageCart(userId,product,qty, true);

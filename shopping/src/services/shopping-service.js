@@ -8,8 +8,7 @@ class ShoppingService {
         this.repository = new ShoppingRepository();
     }
 
-    async GetCart({ _id }){
-        
+    async GetCart(_id){  
         const cartItems = await this.repository.Cart(_id);
         return FormateData(cartItems);
     }
@@ -43,13 +42,16 @@ class ShoppingService {
      
 
     async SubscribeEvents(payload){
+
+        //parse the data got from message broker
+        payload = JSON.parse(payload);
  
         const { event, data } = payload;
         const { userId, product, qty } = data;
         
         switch(event){
             case 'ADD_TO_CART':
-                this.ManageCart(userId,product, qty, false);
+                this.ManageCart(userId, product, qty, false);
                 break;
             case 'REMOVE_FROM_CART':
                 this.ManageCart(userId,product, qty, true);

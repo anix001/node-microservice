@@ -1,8 +1,11 @@
 const CustomerService = require("../services/customer-service");
+const { ConsumeMessage } = require("../utils");
 const UserAuth = require("./middlewares/auth");
 
-module.exports = (app) => {
+module.exports = (app, channel) => {
   const service = new CustomerService();
+  //consume message from message broker
+  ConsumeMessage(channel, service);
 
   app.post("/signup", async (req, res, next) => {
     try {

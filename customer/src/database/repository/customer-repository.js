@@ -97,7 +97,7 @@ class CustomerRepository {
     }
   }
 
-  async AddWishlistItem(customerId, {_id, name, desc, price, available, banner}) {
+  async AddWishlistItem(customerId, {_id, name, desc, price, available, banner}, isRemove) {
 
     const product ={
       _id, name, desc, price, available, banner
@@ -116,20 +116,28 @@ class CustomerRepository {
           wishlist.map((item) => {
             if (item._id.toString() === product._id.toString()) {
               const index = wishlist.indexOf(item);
-              wishlist.splice(index, 1);
-              isExist = true;
+              if(isRemove){
+                let a = wishlist.splice(wishlist.indexOf(item), 1);
+              }else{
+                wishlist.splice(index, 1);
+                isExist = true;
+              }
             }
           });
 
-          if (!isExist) {
+          if (!isExist && !isRemove) {
             wishlist.push(product);
           }
         } else {
+          if(!isRemove){
           wishlist.push(product);
+          }
         }
 
         profile.wishlist = wishlist;
       }
+
+      // console.log("profile", profile)
 
       const profileResult = await profile.save();
 
@@ -158,14 +166,13 @@ class CustomerRepository {
         let cartItems = profile.cart;
 
         if (cartItems.length > 0) {
+
           let isExist = false;
-          cartItems.map((item) => {
-            if (item.product._id.toString() === product._id.toString()) {
+          cartItems?.map((item) => {
+            if (item.product._id.toString() === _id.toString()) {
               if (isRemove) {
                 cartItems.splice(cartItems.indexOf(item), 1);
-              } else {
-                item.unit = qty;
-              }
+              } 
               isExist = true;
             }
           });
@@ -179,12 +186,14 @@ class CustomerRepository {
 
         profile.cart = cartItems;
 
+
         const cartSaveResult = await profile.save();
 
         return cartSaveResult.cart;
+      }else{
+        throw new Error("Unable to add to cart!");
       }
 
-      throw new Error("Unable to add to cart!");
     } catch (err) {
       throw new APIError(
         "API Error",
