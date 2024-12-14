@@ -23,8 +23,21 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
+
     - name: Test Customer service
       working-directory: ./customer
       run: |
         npm ci
         npm test
+
+    - name: Test Product service
+      working-directory: ./products
+      run: |
+          npm ci
+          npm test
+    
+    - name: Test Shopping service
+      working-directory: ./shopping
+      run: |
+            npm ci
+            npm test
