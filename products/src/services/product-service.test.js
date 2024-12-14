@@ -4,7 +4,7 @@ describe("ProductService", ()=>{
     //which function
     describe("CreateProduct", ()=>{
         
-        //which scenario we are testing
+        //which scenario we are testing in this test case
         test("validate user inputs", ()=>{
 
         });
