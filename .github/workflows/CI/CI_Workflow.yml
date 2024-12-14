@@ -1,0 +1,30 @@
+
+name: Continuous Integaration
+
+on:
+  push:
+    branches: [ "feat/communication-using-rabbitmq" ]
+  pull_request:
+    branches: [ "feat/communication-using-rabbitmq" ]
+
+jobs:
+  ci-verification:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+    - name: Test Customer service
+      working-directory: ./customer
+      run: |
+        npm ci
+        npm test
