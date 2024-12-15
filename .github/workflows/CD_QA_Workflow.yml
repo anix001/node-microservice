@@ -1,0 +1,59 @@
+name: Deploy on QA
+
+on:
+  push:
+    branches: [ "feat/communication-using-rabbitmq" ]
+
+jobs:
+  deploy_on_qa:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Create Products env file
+      working-directory: ./products
+      run: |
+        touch .env
+        echo APP_SECRET=${{ secrets.APP_SECRET}} >> .env
+        echo MONGODB_URI=${{ secrets.MONGODB_URL}} >> .env
+        echo MESSAGE_BROKER_URL=${{ secrets.MESSAGE_BROKER_URL}} >> .env
+        echo PORT=${{secrets.PRODUCT_PORT}} >> .env
+        cat .env  
+        
+    - name: Create Customer env file
+      working-directory: ./customer
+      run: |
+        touch .env
+        echo APP_SECRET=${{ secrets.APP_SECRET}} >> .env
+        echo MONGODB_URI=${{ secrets.CUSTOMER_MONGODB_URL}} >> .env
+        echo MESSAGE_BROKER_URL=${{ secrets.MESSAGE_BROKER_URL}} >> .env
+        echo PORT=${{secrets.CUSTOMER_PORT}} >> .env
+        cat .env 
+
+    - name: Create Products env file
+      working-directory: ./shopping
+      run: |
+          touch .env
+          echo APP_SECRET=${{ secrets.APP_SECRET}} >> .env
+          echo MONGODB_URI=${{ secrets.SHOPPING_MONGODB_URL}} >> .env
+          echo MESSAGE_BROKER_URL=${{ secrets.MESSAGE_BROKER_URL}} >> .env
+          echo PORT=${{secrets.SHOPPING_PORT}} >> .env
+          cat .env 
+    
+    - name: Generate deployment package
+      run: |
+        zip -r deploy.zip . -x '*.git*'
+
+    - name: Deploy on Elastic beanstalk QA Env
+      uses: einaregilsson/beanstalk-deploy@v22
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID}}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY}}
+        application_name: "QA_shopping"
+        environment_name: "QAshopping-env"
+        version_label: "ver-${{ github.sha}}"
+        region: us-east-1
+        deployment-package: deploy.zip
