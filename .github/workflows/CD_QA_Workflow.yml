@@ -56,4 +56,4 @@ jobs:
         environment_name: "QAshopping-env"
         version_label: "ver-${{ github.sha}}"
         region: us-east-1
-        deployment-package: deploy.zip
+        deployment_package: deploy.zip
