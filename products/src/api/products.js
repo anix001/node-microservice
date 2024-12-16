@@ -1,11 +1,14 @@
 const { CUSTOMER_SERVICE_BINDING_KEY, SHOPPING_SERVICE_BINDING_KEY } = require('../config');
 const ProductService = require('../services/product-service');
-const {PublishMessage} = require('../utils')
+const { RPCObserver } = require('../utils');
 const UserAuth = require('./middlewares/auth')
 
 module.exports = (app, channel) => {
     
     const service = new ProductService();
+
+
+    RPCObserver("PRODUCT_RPC", service);
 
 
     app.post('/product/create', async(req,res,next) => {
@@ -63,103 +66,103 @@ module.exports = (app, channel) => {
        
     });
      
-    app.put('/wishlist',UserAuth, async (req,res,next) => {
+    // app.put('/wishlist',UserAuth, async (req,res,next) => {
 
-        const { _id } = req.user;  
+    //     const { _id } = req.user;  
         
-        try {
-             //get payload to send to customer service
-            const {data} = await  service.GetProductPayload(_id, {productId: req.body._id}, 'ADD_TO_WISHLIST')
-            // PublishCustomerEvent(data);
+    //     try {
+    //          //get payload to send to customer service
+    //         const {data} = await  service.GetProductPayload(_id, {productId: req.body._id}, 'ADD_TO_WISHLIST')
+    //         // PublishCustomerEvent(data);
             
 
-            //publish message using message broker
-            PublishMessage(channel, CUSTOMER_SERVICE_BINDING_KEY, JSON.stringify(data));
+    //         //publish message using message broker
+    //         PublishMessage(channel, CUSTOMER_SERVICE_BINDING_KEY, JSON.stringify(data));
             
-            return res.status(200).json(data.data.product);
-        } catch (err) {
+    //         return res.status(200).json(data.data.product);
+    //     } catch (err) {
             
-        }
-    });
+    //     }
+    // });
     
-    app.delete('/wishlist/:id',UserAuth, async (req,res,next) => {
+    // app.delete('/wishlist/:id',UserAuth, async (req,res,next) => {
 
-        const { _id } = req.user;
-        const productId = req.params.id;
+    //     const { _id } = req.user;
+    //     const productId = req.params.id;
 
-        try {
-            //get payload to send to customer service
-            const {data} = await service.GetProductPayload(_id, {productId:productId}, 'REMOVE_FROM_WISHLIST');
-            // PublishCustomerEvent(data);
+    //     try {
+    //         //get payload to send to customer service
+    //         const {data} = await service.GetProductPayload(_id, {productId:productId}, 'REMOVE_FROM_WISHLIST');
+    //         // PublishCustomerEvent(data);
 
-             //publish message using message broker
-             PublishMessage(channel, CUSTOMER_SERVICE_BINDING_KEY, JSON.stringify(data));
+    //          //publish message using message broker
+    //          PublishMessage(channel, CUSTOMER_SERVICE_BINDING_KEY, JSON.stringify(data));
 
-            return res.status(200).json(data.data.product);
-        } catch (err) {
-            next(err)
-        }
-    });
+    //         return res.status(200).json(data.data.product);
+    //     } catch (err) {
+    //         next(err)
+    //     }
+    // });
 
 
-    app.put('/cart',UserAuth, async (req,res,next) => {
+    // app.put('/cart',UserAuth, async (req,res,next) => {
         
-        const { _id } = req.user;
+    //     const { _id } = req.user;
         
-        try { 
-            const {data} = await service.GetProductPayload(_id, {productId: req.body._id, qty: req.body.qty}, 'ADD_TO_CART');
+    //     try { 
+    //         const {data} = await service.GetProductPayload(_id, {productId: req.body._id, qty: req.body.qty}, 'ADD_TO_CART');
 
-            //PublishCustomerEvent(data); // add item to cart in customer service
-            //PublishShoppingEvent(data); // shopping service also performs some operation in cart thats why we are sending data there
+    //         //PublishCustomerEvent(data); // add item to cart in customer service
+    //         //PublishShoppingEvent(data); // shopping service also performs some operation in cart thats why we are sending data there
 
-             //publish message using message broker in customer service
-             PublishMessage(channel, CUSTOMER_SERVICE_BINDING_KEY, JSON.stringify(data));
+    //          //publish message using message broker in customer service
+    //          PublishMessage(channel, CUSTOMER_SERVICE_BINDING_KEY, JSON.stringify(data));
 
-             //publish message using message broker in shopping service
-             PublishMessage(channel, SHOPPING_SERVICE_BINDING_KEY, JSON.stringify(data));
+    //          //publish message using message broker in shopping service
+    //          PublishMessage(channel, SHOPPING_SERVICE_BINDING_KEY, JSON.stringify(data));
 
 
-            const response = {
-                product: data.data.product,
-                unit: data.data.qty
-            }
+    //         const response = {
+    //             product: data.data.product,
+    //             unit: data.data.qty
+    //         }
     
-            return res.status(200).json(response);
+    //         return res.status(200).json(response);
             
-        } catch (err) {
-            next(err)
-        }
-    });
+    //     } catch (err) {
+    //         next(err)
+    //     }
+    // });
     
-    app.delete('/cart/:id',UserAuth, async (req,res,next) => {
+    // app.delete('/cart/:id',UserAuth, async (req,res,next) => {
 
-        const { _id } = req.user;
-        const productId = req.params.id
+    //     const { _id } = req.user;
+    //     const productId = req.params.id
 
-        try {
-            const {data} = await service.GetProductPayload(_id, {productId}, 'REMOVE_FROM_CART');
+    //     try {
+    //         const {data} = await service.GetProductPayload(_id, {productId}, 'REMOVE_FROM_CART');
 
-            //PublishCustomerEvent(data); // add item to cart in customer service
-            //PublishShoppingEvent(data); // shopping service also performs some operation in cart thats why we are sending data there  
+    //         //PublishCustomerEvent(data); // add item to cart in customer service
+    //         //PublishShoppingEvent(data); // shopping service also performs some operation in cart thats why we are sending data there  
 
-            //publish message using message broker in customer service
-            PublishMessage(channel, CUSTOMER_SERVICE_BINDING_KEY, JSON.stringify(data));
+    //         //publish message using message broker in customer service
+    //         PublishMessage(channel, CUSTOMER_SERVICE_BINDING_KEY, JSON.stringify(data));
 
-            //publish message using message broker in shopping service
-            PublishMessage(channel, SHOPPING_SERVICE_BINDING_KEY, JSON.stringify(data));
+    //         //publish message using message broker in shopping service
+    //         PublishMessage(channel, SHOPPING_SERVICE_BINDING_KEY, JSON.stringify(data));
 
 
-            const response = {
-                product: data.data.product,
-                unit: data.data.qty
-            }
+    //         const response = {
+    //             product: data.data.product,
+    //             unit: data.data.qty
+    //         }
     
-            return res.status(200).json(response);
+    //         return res.status(200).json(response);
              
-        } catch (err) {
-            next(err)
-        }
-    });
+    //     } catch (err) {
+    //         next(err)
+    //     }
+    // });
 
     //get Top products and category
     app.get('/', async (req,res,next) => {

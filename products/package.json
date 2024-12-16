@@ -5,7 +5,7 @@
   "scripts": {
     "start": "set NODE_ENV=prod & node src/index.js",
     "dev": "SET NODE_ENV=dev & nodemon src/index.js",
-    "test":"jest"
+    "test": "jest"
   },
   "keywords": [],
   "author": "",

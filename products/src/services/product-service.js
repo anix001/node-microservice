@@ -92,6 +92,19 @@ class ProductService {
 
    }
      
+   //RPC Response
+   async serveRPCRequest(payload){
+    const {type, data} = payload;
+
+    switch(type){
+        case "VIEW_PRODUCT":
+            return this.repository.FindById(data);
+        case "VIEW_PRODUCTS":
+            return this.repository.FindSelectedProducts(data);
+        default:
+            break;
+    }
+   }
 }
 
 module.exports = ProductService;

@@ -2,6 +2,8 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 // const axios = require('axios');
 const amqplib = require('amqplib');
+const { v4: uuid4} = require("uuid");
+
 
 const { APP_SECRET, MESSAGE_BROKER_URL, EXCHANGE_NAME } = require("../config");
 
@@ -73,10 +75,20 @@ module.exports.FormateData = (data) => {
 
 //create a channel
 
+let amqplibConnection = null;
+
+
+const getChannel = async()=>{
+  if(amqplibConnection === null){
+    amqplibConnection = await amqplib.connect(MESSAGE_BROKER_URL);
+  }
+  return await amqplibConnection.createChannel();
+};
+
+
 module.exports.CreateChannel = async()=>{
  try{
-  const connection = await amqplib.connect(MESSAGE_BROKER_URL);
-  const channel = await connection.createChannel();
+  const channel = await getChannel();
   //creating an exchange 
   await channel.assertExchange(EXCHANGE_NAME, 'direct', {
     durable: false
@@ -112,3 +124,35 @@ module.exports.ConsumeMessage = async(channel, service, binding_key)=>{
    console.log("Error while consume message", err);
   }
 }
+
+//observe the activity like if you are sending something from client, will perform some operation based on condition and respond
+module.exports.RPCObserver = async(RPC_QUEUE_NAME, service)=>{
+   const channel = await getChannel();
+   //creating a queue
+   await channel.assertQueue(RPC_QUEUE_NAME,{
+    durable:false,
+   });
+
+   channel.prefetch(1);
+   channel.consume(RPC_QUEUE_NAME, async(msg)=>{
+    if(msg.content){
+        //DB operation
+      const payload  = JSON.parse(msg.content.toString());
+      const response = await service.serveRPCRequest(payload);
+
+      channel.sendToQueue(
+        msg.properties.replyTo,
+        Buffer.from(JSON.stringify(response)),
+        {
+            correlationId: msg.properties.correlationId
+        }
+      );
+
+      channel.ack(msg);
+
+    }
+   },{
+    noAck: false,
+   })
+};
+
