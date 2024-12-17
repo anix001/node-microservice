@@ -15,6 +15,13 @@ const StartServer = async() => {
     
     await expressApp(app, channel);
 
+    //catch all errors and format and report to logger
+    app.use((error, req, res, next)=>{
+       const statusCode = error.statusCode || 500;
+       const data = error.data || error.message;
+       return res.status(statusCode).json(data);
+    })
+
     app.listen(PORT, () => {
         console.log(`listening to port ${PORT}`);
     })

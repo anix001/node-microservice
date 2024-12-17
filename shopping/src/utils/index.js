@@ -1,7 +1,9 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 // const axios = require("axios");
-const amqplib = require('amqplib')
+
+const amqplib = require('amqplib');
+const { v4: uuid4} = require("uuid");
 
 const { APP_SECRET, MESSAGE_BROKER_URL, EXCHANGE_NAME, SHOPPING_SERVICE_BINDING_KEY, QUEUE_NAME } = require("../config");
 
@@ -68,11 +70,18 @@ module.exports.FormateData = (data) => {
 //************Communication using RabbitMq(message broker) **********//
 
 //create a channel
+let amqplibConnection = null;
+
+const getChannel = async()=>{
+  if(amqplibConnection === null){
+    amqplibConnection = await amqplib.connect(MESSAGE_BROKER_URL);
+  }
+  return await amqplibConnection.createChannel();
+};
 
 module.exports.CreateChannel = async()=>{
   try{
-   const connection = await amqplib.connect(MESSAGE_BROKER_URL);
-   const channel = await connection.createChannel();
+   const channel = await get();
    //creating an exchange 
    await channel.assertExchange(EXCHANGE_NAME, 'direct', {
      durable: false
@@ -112,3 +121,41 @@ module.exports.CreateChannel = async()=>{
     console.log("Error while consume message", err);
    }
  }
+
+
+const requestData = async(RPC_QUEUE_NAME, requestPayload, uuid)=>{
+    const channel = await getChannel();
+
+    const q = await channel.assertQueue("", {exclusive:true}); //gives temporary queue
+
+    channel.sendToQueue(RPC_QUEUE_NAME, Buffer.from(JSON.stringify(requestPayload)),{
+        replyTo:q.queue,
+        correlationId: uuid
+    });
+
+    return new Promise((resolve, reject)=>{
+
+      //timeout of n seconds , after that we won't accept the data
+      const timeout = setTimeout(()=>{
+        channel.close();
+        resolve("API could not fulfill the request!");
+      },8000);
+        channel.consume(q.queue, (msg)=>{
+            if(msg.properties.correlationId === uuid){
+                resolve(JSON.parse(msg.content.toString()));
+                clearTimeout(timeout);
+            }else{
+                reject("Data not found!!");
+            }
+        },{
+            noAck: true
+        })
+    })
+}
+
+module.exports.RPCRequest = async(RPC_QUEUE_NAME, requestPayload)=>{
+  const uuid = uuid4(); //correlationId
+  return requestData(RPC_QUEUE_NAME, requestPayload, uuid);
+};
+
+

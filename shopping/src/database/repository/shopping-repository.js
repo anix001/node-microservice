@@ -1,68 +1,59 @@
-const { OrderModel, CartModel } = require('../models');
+const { OrderModel, CartModel, WishlistModel } = require('../models');
 const { v4: uuidv4 } = require('uuid');
 const { APIError, BadRequestError, STATUS_CODES } = require('../../utils/app-errors')
+const _ = require("lodash");
 
 
 //Dealing with data base operations
 class ShoppingRepository {
 
     // payment
-
-    async Orders(customerId){
+   
+    async Orders(customerId, orderId){
         try{
-            const orders = await OrderModel.find({customerId });        
+          if(orderId){
+            return await OrderModel.findOne({_id: orderId});
+          }else{
+            const orders = await OrderModel.findOne({customerId });        
             return orders;
+          }
         }catch(err){
             throw APIError('API Error', STATUS_CODES.INTERNAL_ERROR, 'Unable to Find Orders')
         }
     } 
 
-    async AddCartItem(customerId, item, qty, isRemove) {
+    async ManageCart(customerId, product, qty, isRemove=false) {
         try {
-                    // return await CartModel.deleteMany();
- 
-                    const cart = await CartModel.findOne({ customerId: customerId })
+          const cart = await CartModel.findOne({customerId});
 
-                    const { _id } = item;
-        
-                    if(cart){
-                        
-                        let isExist = false;
-        
-                        let cartItems = cart.items;
-        
-        
-                        if(cartItems.length > 0){
-        
-                            cartItems.map(item => {
-                                                        
-                                if(item.product._id.toString() === _id.toString()){
-                                    if(isRemove){
-                                        cartItems.splice(cartItems.indexOf(item), 1);
-                                     }else{
-                                       item.unit = qty;
-                                    }
-                                     isExist = true;
-                                }
-                            });
-                        } 
-                        
-                        if(!isExist && !isRemove){
-                            cartItems.push({product: { ...item}, unit: qty });
-                        }
-        
-                        cart.items = cartItems;
-        
-                        return await cart.save()
-         
-                    }else{
-        
-                       return await CartModel.create({
-                            customerId,
-                            items:[{product: { ...item}, unit: qty }]
-                        })
-                    }
-        
+          if(cart){
+            if(isRemove){
+                //handle remove functionality
+                const cartItems  = _.filter(cart.items, (item) => item.product._id !== product._id);
+                cart.items = cartItems;
+            }else{
+                //handle add functionality in existing cart
+              const cartIndex = _.findIndex(cart.items, {product: { _id: product._id} });
+              if(cartIndex > -1){
+                //if product already exist
+                cart.items[cartIndex].qty = qty;
+              }else{
+                cart.items.push({product:{...product}, unit: qty})
+              }
+            }
+            return await cart.save();
+          }else{
+            //create a new cart
+            return await CartModel.create({
+                customerId,
+                items:[{
+                    product:{
+                        ...product
+                    },
+                    unit:qty
+                }]
+            });
+          }
         } catch (err) {
           throw new APIError(
             "API Error",
@@ -70,7 +61,46 @@ class ShoppingRepository {
             "Unable to add to cart"
           );
         }
+    }
+
+    //wishlist
+    async ManageWishlist(customerId, productId, isRemove =false) {
+      try {
+        const wishlist = await WishlistModel.findOne({customerId});
+
+        if(wishlist){
+          if(isRemove){
+              //handle remove functionality
+              const products  = _.filter(wishlist.products, (item) => item._id !== productId);
+              wishlist.products = products;
+          }else{
+              //handle add functionality in existing cart
+            const wishlistIndex = _.findIndex(wishlist.products,  { _id: productId,});
+            if(wishlistIndex < 0){
+              wishlist.populated.push({_id: productId});
+            }
+          return await wishlist.save();
+        }}else{
+          //create a new wishlist
+          return await WishlistModel.create({
+              customerId,
+              products:[{
+                  _id: productId
+              }]
+          });
+        }
+      } catch (err) {
+        throw new APIError(
+          "API Error",
+          STATUS_CODES.INTERNAL_ERROR,
+          "Unable to add to wishlist"
+        );
       }
+  }
+
+  async getWishlistById(customerId){
+    return await WishlistModel.findOne({ customerId });
+  }
 
     async Cart(customerId){
         try{
@@ -135,6 +165,13 @@ class ShoppingRepository {
         }
         
 
+    }
+
+    async DeleteProfileData(customerId){
+      return await Promise.all([
+        CartModel.findByIdAndDelete({customerId}),
+        WishlistModel.findByIdAndDelete({customerId})
+      ])
     }
 }
 

@@ -69,6 +69,17 @@ module.exports.CreateChannel = async()=>{
    console.log("Error while creating channel", err);
   }
  }
+
+ //publish message
+
+module.exports.PublishMessage = async(channel, binding_key, message)=>{
+  try{
+     await channel.publish(EXCHANGE_NAME, binding_key, Buffer.from(message));
+     console.log("Message has been published from product service", message);
+  }catch(err){
+   console.log("Error while publishing message", err);
+  }
+ }
  
  //consume message
  module.exports.ConsumeMessage = async(channel, service)=>{
